@@ -163,6 +163,7 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
         mLocationRequest.setInterval(10000);
         mLocationRequest.setFastestInterval(5000);
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        mLocationRequest.setSmallestDisplacement(5);
     }
 
     private void startLocationUpdates() {
