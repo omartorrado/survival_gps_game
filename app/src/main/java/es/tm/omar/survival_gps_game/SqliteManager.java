@@ -1,24 +1,30 @@
 package es.tm.omar.survival_gps_game;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+
+import android.content.Context;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
 
 /**
  * Creado por Omar Torrado Míguez el 14/01/2018
  */
 
-public class SqliteManager {
+public class SqliteManager extends SQLiteOpenHelper{
 
-    private Connection cn=null;
+    SQLiteDatabase db;
 
-    public int conectar(){
-        try {
-            Class.forName("org.sqlite.JDBC");
-            cn= DriverManager.getConnection("jdbc:sqlite:sur_gps.db");
-            return 1;
-        } catch (SQLException | ClassNotFoundException ex) {
-            return 0;
-        }
+    public SqliteManager(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {
+        super(context, name, factory, version);
+        db=this.getWritableDatabase();
+    }
+
+    @Override
+    public void onCreate(SQLiteDatabase sqLiteDatabase) {
+
+    }
+
+    @Override
+    public void onUpgrade(SQLiteDatabase sqLiteDatabase, int i, int i1) {
+
     }
 }

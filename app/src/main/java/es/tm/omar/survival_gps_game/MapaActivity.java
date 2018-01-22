@@ -3,6 +3,7 @@ package es.tm.omar.survival_gps_game;
 import android.Manifest;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.graphics.Color;
 import android.location.Location;
 import android.support.v4.app.ActivityCompat;
@@ -51,6 +52,8 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
     private Polyline ruta=null;
     private PolylineOptions rutaOptions;
 
+    private SqliteManager sqlite;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -69,6 +72,14 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
         textViewAltitude = findViewById(R.id.textViewAltitude);
         textViewTime = findViewById(R.id.textViewTime);
 
+        //Cargamos la clase para el sqlite
+        sqlite=new SqliteManager(this,"sgg.db",null,1);
+
+        //Ahora podemos ejecutar comandos sobre la bd
+        System.out.println("SQLite path: "+sqlite.db.getPath()+" , "+sqlite.getDatabaseName());
+        Cursor c=sqlite.db.rawQuery("select name from sqlite_master where type='table'",null);
+
+                
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
         final Location testLocation=new Location("");
@@ -130,6 +141,7 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
     protected void onPause() {
         super.onPause();
         stopLocationUpdates();
+
     }
 
     @Override
