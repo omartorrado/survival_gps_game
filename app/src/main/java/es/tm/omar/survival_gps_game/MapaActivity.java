@@ -49,8 +49,11 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
     private LocationCallback mLocationCallback;
 
     private Location currentLocation;
-    private Polyline ruta=null;
+    private Polyline ruta = null;
     private PolylineOptions rutaOptions;
+
+    DecimalFormat df;
+    Calendar timeFormat;
 
     private SqliteManager sqlite;
 
@@ -72,95 +75,105 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
         textViewAltitude = findViewById(R.id.textViewAltitude);
         textViewTime = findViewById(R.id.textViewTime);
 
+        df = new DecimalFormat("0.0000");
+        timeFormat = Calendar.getInstance();
+
 ///////////////////////////SQL//////////////////
         //Cargamos la clase para el sqlite
-        sqlite=new SqliteManager(this,"sgg.db",null,1);
+        sqlite = new SqliteManager(this, "sgg.db", null, 1);
 
         //Ahora podemos ejecutar comandos sobre la bd
-        System.out.println("SQLite path: "+sqlite.db.getPath()+" , "+sqlite.getDatabaseName());
+        System.out.println("SQLite path: " + sqlite.db.getPath() + " , " + sqlite.getDatabaseName());
         /*
         Comandos sql de pruebas
          */
-        //sqlite.db.execSQL("create table usuarios(id integer,nombre text, lastKnownLatitude float,lastKnownLongitude float)");
+        //ejecutar la primera vez que se carga la app
+        //sqlite.db.execSQL("create table usuarios(id integer,nombre text, lastKnownLatitude real,lastKnownLongitude real)");
         //sqlite.db.execSQL("insert into usuarios values(77,'Omar', 0.0,0.0)");
 
         //creamos el cursor con la busqueda que queremos realizar
-        Cursor c=sqlite.db.rawQuery("select name from sqlite_master where type='table'",null);
+        Cursor c = sqlite.db.rawQuery("select name from sqlite_master where type='table'", null);
 
         //con estos dos comandos obtenemos el numero de filas y columnas
+        /*
         int filas=c.getCount();
         int columnas= c.getColumnCount();
 
         Toast.makeText(this, "filas: "+filas, Toast.LENGTH_SHORT).show();
         Toast.makeText(this, "columnas: "+columnas, Toast.LENGTH_SHORT).show();
+        */
+
 
         /*
         el cursor empieza en la posicion -1 por lo que hay que moverlo a la posicion 0 (que se corresponde con la
         primera fila, en caso de haberla)
         Como solo hay una columna en la busqueda, accedemos a ella con la posicion 0 (columnIndex:0)
         */
-        for(int i=0;i<c.getCount();i++) {
-            Toast.makeText(this, "Posicion del cursor: "+c.getPosition(), Toast.LENGTH_SHORT).show();
+        for (int i = 0; i < c.getCount(); i++) {
+            Toast.makeText(this, "Posicion del cursor: " + c.getPosition(), Toast.LENGTH_SHORT).show();
             c.moveToNext();
             Toast.makeText(this, c.getString(0), Toast.LENGTH_SHORT).show();
         }
 
         ///////////////////////Comprobando las coordenadas almacenadas///////////////////////
-        Cursor d=sqlite.db.rawQuery("select * from usuarios",null);
-
+        Cursor d = sqlite.db.rawQuery("select * from usuarios", null);
+        System.out.println("FILAS DE USUARIO ENCONTRADAS: " + d.getCount());
 
         /*
         el cursor empieza en la posicion -1 por lo que hay que moverlo a la posicion 0 (que se corresponde con la
         primera fila, en caso de haberla)
         Como solo hay una columna en la busqueda, accedemos a ella con la posicion 0 (columnIndex:0)
         */
-        for(int i=0;i<d.getCount();i++) {
+        for (int i = 0; i < d.getCount(); i++) {
             d.moveToNext();
-            currentLocation=new Location("");
-            currentLocation.setLatitude(d.getFloat(2));
-            currentLocation.setLongitude(d.getFloat(3));
-            Toast.makeText(this, "Lat: "+d.getFloat(2)+" Lon: "+d.getFloat(3), Toast.LENGTH_SHORT).show();
+            currentLocation = new Location("");
+            currentLocation.setLatitude(d.getDouble(2));
+            currentLocation.setLongitude(d.getDouble(3));
+            Toast.makeText(this, "Lat: " + d.getDouble(2) + " Lon: " + d.getDouble(3), Toast.LENGTH_SHORT).show();
         }
 
 
 /////////////////////SQL END/////////////////////
-                
+
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
-        final Location testLocation=new Location("");
+        final Location testLocation = new Location("");
 
         mLocationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(LocationResult locationResult) {
                 for (Location location : locationResult.getLocations()) {
 
-                        DecimalFormat df=new DecimalFormat("0.0000");
-                        Calendar timeFormat=Calendar.getInstance();
-                        timeFormat.setTimeInMillis(location.getTime());
+                    /*
+                    Todo Aqui tengo que hacer los calculos para en lugar de mostrar la posicion real, mostrar la posicion ingame
+                    y que el desplazamiento sea respecto a esta
+                     */
 
-                        textViewAccuracy.setText("Accu: "+location.getAccuracy());
-                        textViewLat.setText("Lat: "+df.format(location.getLatitude()));
-                        textViewLng.setText("Lng: "+df.format(location.getLongitude()));
-                        textViewDist.setText("Dist: "+location.distanceTo(testLocation)+"m");
-                        textViewBearing.setText("Bearing: "+location.getBearing());
-                        textViewSpeed.setText("Speed: "+location.getSpeed());
-                        textViewAltitude.setText("Alt: "+df.format(location.getAltitude()));
-                        textViewTime.setText("Time: "+timeFormat.getTime());
+                    timeFormat.setTimeInMillis(location.getTime());
 
-                        currentLocation=location;
-                        LatLng latLng=new LatLng(location.getLatitude(),location.getLongitude());
-                        mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+                    textViewAccuracy.setText("Accu: " + location.getAccuracy());
+                    textViewLat.setText("Lat: " + df.format(location.getLatitude()));
+                    textViewLng.setText("Lng: " + df.format(location.getLongitude()));
+                    textViewDist.setText("Dist: " + location.distanceTo(testLocation) + "m");
+                    textViewBearing.setText("Bearing: " + location.getBearing());
+                    textViewSpeed.setText("Speed: " + location.getSpeed());
+                    textViewAltitude.setText("Alt: " + df.format(location.getAltitude()));
+                    textViewTime.setText("Time: " + timeFormat.getTime());
 
-                    if(ruta==null&&currentLocation.getAccuracy()<=30) {
+                    currentLocation = location;
+                    LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+                    mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+
+                    if (ruta == null && currentLocation.getAccuracy() <= 50) {
                         rutaOptions = new PolylineOptions();
                         rutaOptions.add(latLng);
                         rutaOptions.color(Color.RED);
-                        ruta=mMap.addPolyline(rutaOptions);
-                    }else if(currentLocation.getAccuracy()<=30){
-                        List linea=ruta.getPoints();
+                        ruta = mMap.addPolyline(rutaOptions);
+                    } else if (currentLocation.getAccuracy() <= 50) {
+                        List linea = ruta.getPoints();
                         linea.add(latLng);
                         ruta.setPoints(linea);
-                    }else{
+                    } else {
                         Toast.makeText(MapaActivity.this, "Precision insuficiente", Toast.LENGTH_SHORT).show();
                     }
 
@@ -178,21 +191,18 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        float lat= (float) currentLocation.getLatitude();
-        float lon=(float) currentLocation.getLongitude();
-        String consulta="update usuarios set lastKnownLatitude="+lat+", lastKnownLongitude="+lon+" where id=77";
-        sqlite.db.execSQL(consulta);
+    protected void onStop() {
+        super.onStop();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        float lat= (float) currentLocation.getLatitude();
-        float lon=(float) currentLocation.getLongitude();
-        String consulta="update usuarios set lastKnownLatitude="+lat+", lastKnownLongitude="+lon+" where id=77";
+        float lat = (float) currentLocation.getLatitude();
+        float lon = (float) currentLocation.getLongitude();
+        String consulta = "update usuarios set lastKnownLatitude=" + lat + ", lastKnownLongitude=" + lon + " where id=77";
         sqlite.db.execSQL(consulta);
+        System.out.println("Localizacion guardada en onPause()");
         stopLocationUpdates();
 
     }
@@ -217,18 +227,36 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
         mMap = googleMap;
         mMap.getUiSettings().setZoomControlsEnabled(false);
         mMap.getUiSettings().setCompassEnabled(true);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        mMap.setMyLocationEnabled(true);
+
         mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, R.raw.mapa_style_json));
+
+        LatLng latLng=new LatLng(currentLocation.getLatitude(),currentLocation.getLongitude());
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng,15));
 
         startLocationUpdates();
 
     }
 
     protected void createLocationRequest() {
+        /*
+        Todo hacer pruebas con diferentes intervalos y desplazamientos. Segun la documentacion el fastest interval es aprox 6x veces el interval
+         */
         mLocationRequest = new LocationRequest();
-        mLocationRequest.setInterval(10000);
+        mLocationRequest.setInterval(30000);
         mLocationRequest.setFastestInterval(5000);
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        mLocationRequest.setSmallestDisplacement(5);
+        mLocationRequest.setSmallestDisplacement(0);
     }
 
     private void startLocationUpdates() {
