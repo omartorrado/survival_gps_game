@@ -72,13 +72,58 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
         textViewAltitude = findViewById(R.id.textViewAltitude);
         textViewTime = findViewById(R.id.textViewTime);
 
+///////////////////////////SQL//////////////////
         //Cargamos la clase para el sqlite
         sqlite=new SqliteManager(this,"sgg.db",null,1);
 
         //Ahora podemos ejecutar comandos sobre la bd
         System.out.println("SQLite path: "+sqlite.db.getPath()+" , "+sqlite.getDatabaseName());
+        /*
+        Comandos sql de pruebas
+         */
+        //sqlite.db.execSQL("create table usuarios(id integer,nombre text, lastKnownLatitude float,lastKnownLongitude float)");
+        //sqlite.db.execSQL("insert into usuarios values(77,'Omar', 0.0,0.0)");
+
+        //creamos el cursor con la busqueda que queremos realizar
         Cursor c=sqlite.db.rawQuery("select name from sqlite_master where type='table'",null);
 
+        //con estos dos comandos obtenemos el numero de filas y columnas
+        int filas=c.getCount();
+        int columnas= c.getColumnCount();
+
+        Toast.makeText(this, "filas: "+filas, Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "columnas: "+columnas, Toast.LENGTH_SHORT).show();
+
+        /*
+        el cursor empieza en la posicion -1 por lo que hay que moverlo a la posicion 0 (que se corresponde con la
+        primera fila, en caso de haberla)
+        Como solo hay una columna en la busqueda, accedemos a ella con la posicion 0 (columnIndex:0)
+        */
+        for(int i=0;i<c.getCount();i++) {
+            Toast.makeText(this, "Posicion del cursor: "+c.getPosition(), Toast.LENGTH_SHORT).show();
+            c.moveToNext();
+            Toast.makeText(this, c.getString(0), Toast.LENGTH_SHORT).show();
+        }
+
+        ///////////////////////Comprobando las coordenadas almacenadas///////////////////////
+        Cursor d=sqlite.db.rawQuery("select * from usuarios",null);
+
+
+        /*
+        el cursor empieza en la posicion -1 por lo que hay que moverlo a la posicion 0 (que se corresponde con la
+        primera fila, en caso de haberla)
+        Como solo hay una columna en la busqueda, accedemos a ella con la posicion 0 (columnIndex:0)
+        */
+        for(int i=0;i<d.getCount();i++) {
+            d.moveToNext();
+            currentLocation=new Location("");
+            currentLocation.setLatitude(d.getFloat(2));
+            currentLocation.setLongitude(d.getFloat(3));
+            Toast.makeText(this, "Lat: "+d.getFloat(2)+" Lon: "+d.getFloat(3), Toast.LENGTH_SHORT).show();
+        }
+
+
+/////////////////////SQL END/////////////////////
                 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
@@ -135,11 +180,19 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        float lat= (float) currentLocation.getLatitude();
+        float lon=(float) currentLocation.getLongitude();
+        String consulta="update usuarios set lastKnownLatitude="+lat+", lastKnownLongitude="+lon+" where id=77";
+        sqlite.db.execSQL(consulta);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        float lat= (float) currentLocation.getLatitude();
+        float lon=(float) currentLocation.getLongitude();
+        String consulta="update usuarios set lastKnownLatitude="+lat+", lastKnownLongitude="+lon+" where id=77";
+        sqlite.db.execSQL(consulta);
         stopLocationUpdates();
 
     }
