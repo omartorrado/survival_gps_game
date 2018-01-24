@@ -4,6 +4,8 @@ import android.Manifest;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.database.SQLException;
+import android.database.sqlite.SQLiteException;
 import android.graphics.Color;
 import android.location.Location;
 import android.support.v4.app.ActivityCompat;
@@ -88,9 +90,14 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
         Comandos sql de pruebas
          */
         //ejecutar la primera vez que se carga la app
-        //sqlite.db.execSQL("create table usuarios(id integer,nombre text, lastKnownLatitude real,lastKnownLongitude real)");
-        //sqlite.db.execSQL("insert into usuarios values(77,'Omar', 0.0,0.0)");
+        try {
+            //sqlite.db.execSQL("drop table usuarios");
+            //sqlite.db.execSQL("drop table testRuta");
+            sqlite.db.execSQL("create table usuarios(id integer,nombre text, lastKnownLatitude real,lastKnownLongitude real)");
+            sqlite.db.execSQL("insert into usuarios values(77,'Omar', 0.0,0.0)");
+        }catch(SQLiteException es){
 
+        }
         //creamos el cursor con la busqueda que queremos realizar
         Cursor c = sqlite.db.rawQuery("select name from sqlite_master where type='table'", null);
 
@@ -110,8 +117,10 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
         Como solo hay una columna en la busqueda, accedemos a ella con la posicion 0 (columnIndex:0)
         */
         for (int i = 0; i < c.getCount(); i++) {
+            System.out.println(c.getPosition());
             Toast.makeText(this, "Posicion del cursor: " + c.getPosition(), Toast.LENGTH_SHORT).show();
             c.moveToNext();
+            System.out.println(c.getString(0));
             Toast.makeText(this, c.getString(0), Toast.LENGTH_SHORT).show();
         }
 
@@ -135,6 +144,9 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
 
 /////////////////////SQL END/////////////////////
 
+        rutaOptions = sqlite.ultimaRuta();
+
+        //cargamos el listener de la localizacion
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
         final Location testLocation = new Location("");
@@ -143,6 +155,9 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onLocationResult(LocationResult locationResult) {
                 for (Location location : locationResult.getLocations()) {
+                    //inicializo la ruta que vamos a mostrar cargando los datos de la db
+
+                    ruta=mMap.addPolyline(rutaOptions);
 
                     /*
                     Todo Aqui tengo que hacer los calculos para en lugar de mostrar la posicion real, mostrar la posicion ingame
@@ -164,8 +179,8 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
                     LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
                     mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
 
+                    //El primer if probablemente sea innecesario (el else if no)
                     if (ruta == null && currentLocation.getAccuracy() <= 50) {
-                        rutaOptions = new PolylineOptions();
                         rutaOptions.add(latLng);
                         rutaOptions.color(Color.RED);
                         ruta = mMap.addPolyline(rutaOptions);
@@ -173,6 +188,7 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
                         List linea = ruta.getPoints();
                         linea.add(latLng);
                         ruta.setPoints(linea);
+
                     } else {
                         Toast.makeText(MapaActivity.this, "Precision insuficiente", Toast.LENGTH_SHORT).show();
                     }
@@ -196,13 +212,35 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        sqlite.close();
+    }
+
+    @Override
     protected void onPause() {
         super.onPause();
+        //guardo la ultima localizacion
         float lat = (float) currentLocation.getLatitude();
         float lon = (float) currentLocation.getLongitude();
         String consulta = "update usuarios set lastKnownLatitude=" + lat + ", lastKnownLongitude=" + lon + " where id=77";
         sqlite.db.execSQL(consulta);
         System.out.println("Localizacion guardada en onPause()");
+        //Guardo la ruta
+        if(ruta!=null) {
+            List<LatLng> linea = ruta.getPoints();
+            int i = 0;
+            String dropTable = "drop table testRuta";
+            String crearTabla = "create table testRuta (position integer primary key autoincrement,lat real ,lng real)";
+            sqlite.db.execSQL(dropTable);
+            sqlite.db.execSQL(crearTabla);
+            for (LatLng lt : linea) {
+                String consulta2 = "insert into testRuta values(" + i + "," + lt.latitude + "," + lt.longitude + ")";
+                sqlite.db.execSQL(consulta2);
+                i++;
+            }
+
+        }
         stopLocationUpdates();
 
     }
@@ -226,6 +264,7 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
         mMap.getUiSettings().setZoomControlsEnabled(false);
+        mMap.getUiSettings().setMyLocationButtonEnabled(false);
         mMap.getUiSettings().setCompassEnabled(true);
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
