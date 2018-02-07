@@ -80,71 +80,8 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
         df = new DecimalFormat("0.0000");
         timeFormat = Calendar.getInstance();
 
-///////////////////////////SQL//////////////////
-        //Cargamos la clase para el sqlite
-        sqlite = new SqliteManager(this, "sgg.db", null, 1);
-
-        //Ahora podemos ejecutar comandos sobre la bd
-        System.out.println("SQLite path: " + sqlite.db.getPath() + " , " + sqlite.getDatabaseName());
-        /*
-        Comandos sql de pruebas
-         */
-        //ejecutar la primera vez que se carga la app
-        try {
-            //sqlite.db.execSQL("drop table usuarios");
-            //sqlite.db.execSQL("drop table testRuta");
-            sqlite.db.execSQL("create table usuarios(id integer,nombre text, lastKnownLatitude real,lastKnownLongitude real)");
-            sqlite.db.execSQL("insert into usuarios values(77,'Omar', 0.0,0.0)");
-        }catch(SQLiteException es){
-
-        }
-        //creamos el cursor con la busqueda que queremos realizar
-        Cursor c = sqlite.db.rawQuery("select name from sqlite_master where type='table'", null);
-
-        //con estos dos comandos obtenemos el numero de filas y columnas
-        /*
-        int filas=c.getCount();
-        int columnas= c.getColumnCount();
-
-        Toast.makeText(this, "filas: "+filas, Toast.LENGTH_SHORT).show();
-        Toast.makeText(this, "columnas: "+columnas, Toast.LENGTH_SHORT).show();
-        */
-
-
-        /*
-        el cursor empieza en la posicion -1 por lo que hay que moverlo a la posicion 0 (que se corresponde con la
-        primera fila, en caso de haberla)
-        Como solo hay una columna en la busqueda, accedemos a ella con la posicion 0 (columnIndex:0)
-        */
-        for (int i = 0; i < c.getCount(); i++) {
-            System.out.println(c.getPosition());
-            Toast.makeText(this, "Posicion del cursor: " + c.getPosition(), Toast.LENGTH_SHORT).show();
-            c.moveToNext();
-            System.out.println(c.getString(0));
-            Toast.makeText(this, c.getString(0), Toast.LENGTH_SHORT).show();
-        }
-
-        ///////////////////////Comprobando las coordenadas almacenadas///////////////////////
-        Cursor d = sqlite.db.rawQuery("select * from usuarios", null);
-        System.out.println("FILAS DE USUARIO ENCONTRADAS: " + d.getCount());
-
-        /*
-        el cursor empieza en la posicion -1 por lo que hay que moverlo a la posicion 0 (que se corresponde con la
-        primera fila, en caso de haberla)
-        Como solo hay una columna en la busqueda, accedemos a ella con la posicion 0 (columnIndex:0)
-        */
-        for (int i = 0; i < d.getCount(); i++) {
-            d.moveToNext();
-            currentLocation = new Location("");
-            currentLocation.setLatitude(d.getDouble(2));
-            currentLocation.setLongitude(d.getDouble(3));
-            Toast.makeText(this, "Lat: " + d.getDouble(2) + " Lon: " + d.getDouble(3), Toast.LENGTH_SHORT).show();
-        }
-
-
-/////////////////////SQL END/////////////////////
-
-        rutaOptions = sqlite.ultimaRuta();
+        ///////Aqui cargamos la ruta guardada en caso de haberla
+        rutaOptions=new PolylineOptions();
 
         //cargamos el listener de la localizacion
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
@@ -223,24 +160,7 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
         //guardo la ultima localizacion
         float lat = (float) currentLocation.getLatitude();
         float lon = (float) currentLocation.getLongitude();
-        String consulta = "update usuarios set lastKnownLatitude=" + lat + ", lastKnownLongitude=" + lon + " where id=77";
-        sqlite.db.execSQL(consulta);
-        System.out.println("Localizacion guardada en onPause()");
-        //Guardo la ruta
-        if(ruta!=null) {
-            List<LatLng> linea = ruta.getPoints();
-            int i = 0;
-            String dropTable = "drop table testRuta";
-            String crearTabla = "create table testRuta (position integer primary key autoincrement,lat real ,lng real)";
-            sqlite.db.execSQL(dropTable);
-            sqlite.db.execSQL(crearTabla);
-            for (LatLng lt : linea) {
-                String consulta2 = "insert into testRuta values(" + i + "," + lt.latitude + "," + lt.longitude + ")";
-                sqlite.db.execSQL(consulta2);
-                i++;
-            }
 
-        }
         stopLocationUpdates();
 
     }
