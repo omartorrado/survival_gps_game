@@ -1,6 +1,8 @@
 package es.tm.omar.survival_gps_game;
 
 import android.Manifest;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
@@ -28,6 +30,10 @@ import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.gson.Gson;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.text.DecimalFormat;
 import java.util.Calendar;
@@ -53,11 +59,13 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
     private Location currentLocation;
     private Polyline ruta = null;
     private PolylineOptions rutaOptions;
+    private LatLng posicionActual;
+
+    private SharedPreferences sharedPreferences;
+    private String ultimaRuta;
 
     DecimalFormat df;
     Calendar timeFormat;
-
-    private SqliteManager sqlite;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,8 +88,17 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
         df = new DecimalFormat("0.0000");
         timeFormat = Calendar.getInstance();
 
+        //Inicializamos las sharedPreferences
+        sharedPreferences=getSharedPreferences("rutas", Context.MODE_PRIVATE);
+        String rutaGuardada=sharedPreferences.getString("ultimaRuta","");
+
         ///////Aqui cargamos la ruta guardada en caso de haberla
         rutaOptions=new PolylineOptions();
+
+        if(!rutaGuardada.equals("")){
+            System.out.println(rutaGuardada);
+            rutaOptions.addAll(cargarRuta());
+        }
 
         //cargamos el listener de la localizacion
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
@@ -151,7 +168,6 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        sqlite.close();
     }
 
     @Override
@@ -160,7 +176,7 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
         //guardo la ultima localizacion
         float lat = (float) currentLocation.getLatitude();
         float lon = (float) currentLocation.getLongitude();
-
+        guardarRuta(ruta.getPoints());
         stopLocationUpdates();
 
     }
@@ -169,6 +185,7 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
     protected void onResume() {
         super.onResume();
         startLocationUpdates();
+        cargarRuta();
     }
 
     /**
@@ -200,8 +217,10 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
 
         mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, R.raw.mapa_style_json));
 
-        LatLng latLng=new LatLng(currentLocation.getLatitude(),currentLocation.getLongitude());
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng,15));
+
+
+        //posicionActual=new LatLng(currentLocation.getLatitude(),currentLocation.getLongitude());
+        //mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(posicionActual,15));
 
         startLocationUpdates();
 
@@ -236,5 +255,25 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void stopLocationUpdates() {
         mFusedLocationClient.removeLocationUpdates(mLocationCallback);
+    }
+
+    public void guardarRuta(List<LatLng> ruta){
+        String json=new Gson().toJson(ruta);
+        //Cargamos el editor de SharedPreferences en una variable
+        SharedPreferences.Editor prefEdit= sharedPreferences.edit();
+        //Guardamos cada una de las preferencias pasandole un nombre y el valor
+        prefEdit.putString("ultimaRuta",json);
+        //realizamos un commit para que guarde los cambios, espere a terminar y continue con el codigo
+        prefEdit.commit();
+        /*
+        con prefEdit.apply(); tb guardaria los cambios, pero en lugar de esperar a guardarlo tudo
+        continua ejecutando el codigo mientras las guarda
+        */
+    }
+
+    public List<LatLng> cargarRuta(){
+        String json=sharedPreferences.getString("ultimaRuta","");
+        List<LatLng> lll=new Gson().fromJson(json,List.class);
+        return lll;
     }
 }
