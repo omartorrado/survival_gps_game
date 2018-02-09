@@ -35,7 +35,10 @@ import com.google.gson.Gson;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.sql.Array;
+import java.sql.SQLOutput;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
@@ -96,8 +99,15 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
         rutaOptions=new PolylineOptions();
 
         if(!rutaGuardada.equals("")){
-            System.out.println(rutaGuardada);
-            rutaOptions.addAll(cargarRuta());
+            List l=cargarRuta();
+            for(Object coords:l) {
+                String[] temp=coords.toString().split(",");
+                Double lat=Double.parseDouble(temp[0].substring(1));
+                Double lng=Double.parseDouble(temp[1].substring(0,temp[1].length()-1));
+                //System.out.println(temp[0]+"..."+temp[1]);
+                //System.out.println(lat+"..."+lng);
+                rutaOptions.add(new LatLng(lat,lng));
+            }
         }
 
         //cargamos el listener de la localizacion
@@ -174,9 +184,9 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
     protected void onPause() {
         super.onPause();
         //guardo la ultima localizacion
-        float lat = (float) currentLocation.getLatitude();
-        float lon = (float) currentLocation.getLongitude();
-        guardarRuta(ruta.getPoints());
+        if(ruta!=null) {
+            guardarRuta(ruta.getPoints());
+        }
         stopLocationUpdates();
 
     }
@@ -185,7 +195,7 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
     protected void onResume() {
         super.onResume();
         startLocationUpdates();
-        cargarRuta();
+        System.out.println("Pasamos por on Resume");
     }
 
     /**
@@ -258,7 +268,12 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     public void guardarRuta(List<LatLng> ruta){
-        String json=new Gson().toJson(ruta);
+        List listaTemp = new ArrayList();
+        for(LatLng l:ruta){
+            listaTemp.add(new double[]{l.latitude, l.longitude});
+        }
+        String json=new Gson().toJson(listaTemp);
+        System.out.println("Ruta Guardada: "+json);
         //Cargamos el editor de SharedPreferences en una variable
         SharedPreferences.Editor prefEdit= sharedPreferences.edit();
         //Guardamos cada una de las preferencias pasandole un nombre y el valor
@@ -271,9 +286,10 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
         */
     }
 
-    public List<LatLng> cargarRuta(){
+    public List cargarRuta(){
         String json=sharedPreferences.getString("ultimaRuta","");
-        List<LatLng> lll=new Gson().fromJson(json,List.class);
+        List lll=new Gson().fromJson(json,List.class);
+        System.out.println("Ruta Cargada: "+lll);
         return lll;
     }
 }
