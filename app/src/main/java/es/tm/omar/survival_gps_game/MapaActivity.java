@@ -95,9 +95,11 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
         sharedPreferences=getSharedPreferences("rutas", Context.MODE_PRIVATE);
         String rutaGuardada=sharedPreferences.getString("ultimaRuta","");
 
-        ///////Aqui cargamos la ruta guardada en caso de haberla
-        rutaOptions=new PolylineOptions();
+        ///////Aqui cargamos la ruta guardada en caso de haberla(o no, ya que se carga en onresume
 
+        rutaOptions=new PolylineOptions();
+        rutaOptions.color(Color.RED);
+        /*
         if(!rutaGuardada.equals("")){
             List l=cargarRuta();
             for(Object coords:l) {
@@ -109,6 +111,7 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
                 rutaOptions.add(new LatLng(lat,lng));
             }
         }
+        */
 
         //cargamos el listener de la localizacion
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
@@ -163,6 +166,8 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
 
         createLocationRequest();
 
+        currentLocation=testLocation;
+
     }
 
     @Override
@@ -196,6 +201,21 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
         super.onResume();
         startLocationUpdates();
         System.out.println("Pasamos por on Resume");
+        String rutaGuardada=sharedPreferences.getString("ultimaRuta","");
+        if(!rutaGuardada.equals("")){
+            List l=cargarRuta();
+            rutaOptions=new PolylineOptions();
+            rutaOptions.color(Color.RED);
+            for(Object coords:l) {
+                String[] temp=coords.toString().split(",");
+                Double lat=Double.parseDouble(temp[0].substring(1));
+                Double lng=Double.parseDouble(temp[1].substring(0,temp[1].length()-1));
+                rutaOptions.add(new LatLng(lat,lng));
+            }
+        }
+        if(ruta!=null) {
+            ruta.setPoints(rutaOptions.getPoints());
+        }
     }
 
     /**
@@ -227,12 +247,12 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
 
         mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, R.raw.mapa_style_json));
 
-
-
-        //posicionActual=new LatLng(currentLocation.getLatitude(),currentLocation.getLongitude());
-        //mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(posicionActual,15));
-
         startLocationUpdates();
+
+        posicionActual=new LatLng(currentLocation.getLatitude(),currentLocation.getLongitude());
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(posicionActual,15));
+
+
 
     }
 
@@ -244,7 +264,7 @@ public class MapaActivity extends FragmentActivity implements OnMapReadyCallback
         mLocationRequest.setInterval(30000);
         mLocationRequest.setFastestInterval(5000);
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        mLocationRequest.setSmallestDisplacement(0);
+        mLocationRequest.setSmallestDisplacement(30);
     }
 
     private void startLocationUpdates() {
